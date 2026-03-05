@@ -1,0 +1,26 @@
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+#Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Streamlit
+.streamlit/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dados sensíveis (remova se precisar versionar o CSV)
+# *.csv
