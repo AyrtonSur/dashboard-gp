@@ -26,11 +26,18 @@ df = load_data()
 # Sidebar - Filtros
 st.sidebar.header("🔍 Filtros")
 
-# Filtro de Fase
-fases = sorted(df["Fase atual"].unique().tolist())
-fase_selecionada = st.sidebar.multiselect("Fase Atual",
-                                          options=fases,
-                                          default=[])
+# Filtro de Fase (baseado no funil)
+fases_funil = [
+    "Inscritos",
+    "Responderam",
+    "Aprovados Fit Cultural",
+    "Compareceram Dinâmica",
+    "Aprovados Dinâmica",
+    "Entrevista"
+]
+fase_selecionada = st.sidebar.selectbox("Fase do Processo",
+                                        options=fases_funil,
+                                        index=0)
 
 # Filtro de Curso
 cursos = sorted(df["Curso"].unique().tolist())
@@ -85,8 +92,18 @@ divulgacao_selecionada = st.sidebar.multiselect("Canal de Divulgação",
 # Aplicar filtros
 df_filtrado = df.copy()
 
-if len(fase_selecionada) > 0:
-  df_filtrado = df_filtrado[df_filtrado["Fase atual"].isin(fase_selecionada)]
+if fase_selecionada != "1. Inscritos":
+  # Mapear fase selecionada para condição de filtro
+  if fase_selecionada == "2. Responderam":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta", na=False)]
+  elif fase_selecionada == "3. Aprovados Fit Cultural":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta|Fit Cultural", na=False, regex=True)]
+  elif fase_selecionada == "4. Compareceram Dinâmica":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta|Fit Cultural|Falta na Dinâmica", na=False, regex=True)]
+  elif fase_selecionada == "5. Aprovados Dinâmica":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica", na=False, regex=True)]
+  elif fase_selecionada == "6. Entrevista":
+    df_filtrado = df_filtrado[df_filtrado["Fase atual"] == "Entrevista"]
 
 if len(curso_selecionado) > 0:
   df_filtrado = df_filtrado[df_filtrado["Curso"].isin(curso_selecionado)]
@@ -223,6 +240,7 @@ with tab1:
   fig1.update_layout(title="Funil de Conversão do Processo Seletivo",
                      height=500,
                      showlegend=False)
+  fig1.update_traces(hovertemplate='<b>%{label}</b><br>Candidatos: %{value}<br>% do Total: %{percentInitial}<extra></extra>')
   st.plotly_chart(fig1, use_container_width=True)
 
   # Estatísticas do Funil
@@ -257,6 +275,8 @@ with tab1:
   st.markdown("---")
   st.subheader("Distribuição por Curso")
   curso_counts = df_filtrado["Curso"].value_counts()
+  total_curso = curso_counts.sum()
+  percentuais_curso = [(v/total_curso*100) for v in curso_counts.values]
   fig2 = px.bar(
       x=curso_counts.values,
       y=curso_counts.index,
@@ -266,10 +286,12 @@ with tab1:
           "x": "Quantidade",
           "y": "Curso"
       },
+      custom_data=[percentuais_curso],
   )
   fig2.update_layout(showlegend=False)
   fig2.update_xaxes(showgrid=False)
   fig2.update_yaxes(showgrid=False)
+  fig2.update_traces(hovertemplate='<b>%{y}</b><br>Quantidade: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
   st.plotly_chart(fig2, use_container_width=True)
 
   st.markdown("---")
@@ -342,6 +364,7 @@ with tab1:
     )
     fig3.update_xaxes(showgrid=False, tickangle=-45)
     fig3.update_yaxes(showgrid=False)
+    fig3.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Quantidade: %{y}<extra></extra>')
     st.plotly_chart(fig3, use_container_width=True)
 
   with col_curso2:
@@ -364,6 +387,7 @@ with tab1:
     fig3b.update_xaxes(showgrid=False, tickangle=-45)
     fig3b.update_yaxes(showgrid=False)
     fig3b.update_layout(yaxis_tickformat=".0%")
+    fig3b.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Proporção: %{y:.1%}<extra></extra>')
     st.plotly_chart(fig3b, use_container_width=True)
 
 # TAB 2: DIVERSIDADE
@@ -376,9 +400,8 @@ with tab2:
         df_filtrado["Como você se autodeclara em relação à sua cor ou raça?  "]
         .value_counts().sort_values(ascending=True))
 
-    total = raca_counts.sum()
-    percentuais = (raca_counts / total * 100).round(1)
-
+    total_raca = raca_counts.sum()
+    percentuais_raca = [(v/total_raca*100) for v in raca_counts.values]
     fig4 = px.bar(
         y=raca_counts.index,
         x=raca_counts.values,
@@ -388,23 +411,22 @@ with tab2:
             "x": "Quantidade",
             "y": "Raça/Cor"
         },
-        text=[
-            f"{val} ({pct}%)"
-            for val, pct in zip(raca_counts.values, percentuais)
-        ],
         color=raca_counts.values,
         color_continuous_scale="Teal",
+        custom_data=[percentuais_raca],
     )
-    fig4.update_traces(textposition="outside")
     fig4.update_layout(showlegend=False, height=350)
     fig4.update_xaxes(showgrid=False)
     fig4.update_yaxes(showgrid=False)
+    fig4.update_traces(hovertemplate='<b>%{y}</b><br>Quantidade: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
     st.plotly_chart(fig4, use_container_width=True)
 
   with col2:
     st.subheader("Identidade de Gênero")
     pronome_counts = df_filtrado[
         "Quais pronomes você utiliza?  "].value_counts()
+    total_pronome = pronome_counts.sum()
+    percentuais_pronome = [(v/total_pronome*100) for v in pronome_counts.values]
     fig5 = px.bar(
         x=pronome_counts.index,
         y=pronome_counts.values,
@@ -415,10 +437,12 @@ with tab2:
         },
         color=pronome_counts.values,
         color_continuous_scale="Blues",
+        custom_data=[percentuais_pronome],
     )
     fig5.update_layout(height=350)
     fig5.update_xaxes(showgrid=False)
     fig5.update_yaxes(showgrid=False)
+    fig5.update_traces(hovertemplate='<b>%{x}</b><br>Quantidade: %{y}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
     st.plotly_chart(fig5, use_container_width=True)
 
   col3, col4 = st.columns(2)
@@ -435,9 +459,8 @@ with tab2:
         "Prefiro não responder": "#95E1D3",
     }
     cores = [cores_lgbtq.get(cat, "#BDC3C7") for cat in lgbtq_counts.index]
-
-    total = lgbtq_counts.sum()
-    percentuais = (lgbtq_counts / total * 100).round(1)
+    total_lgbtq = lgbtq_counts.sum()
+    percentuais_lgbtq = [(v/total_lgbtq*100) for v in lgbtq_counts.values]
 
     fig6 = px.bar(
         x=lgbtq_counts.index,
@@ -447,15 +470,13 @@ with tab2:
             "x": "Resposta",
             "y": "Quantidade"
         },
-        text=[
-            f"{val}<br>({pct}%)"
-            for val, pct in zip(lgbtq_counts.values, percentuais)
-        ],
+        custom_data=[percentuais_lgbtq],
     )
-    fig6.update_traces(marker_color=cores, textposition="outside")
+    fig6.update_traces(marker_color=cores)
     fig6.update_layout(showlegend=False, height=350)
     fig6.update_xaxes(showgrid=False)
     fig6.update_yaxes(showgrid=False)
+    fig6.update_traces(hovertemplate='<b>%{x}</b><br>Quantidade: %{y}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
     st.plotly_chart(fig6, use_container_width=True)
 
   with col4:
@@ -463,6 +484,8 @@ with tab2:
     def_counts = df_filtrado[
         "Você possui alguma deficiência, condição ou necessidade específica que a IN Junior deveria considerar para garantir acessibilidade e inclusão?  "].value_counts(
         )
+    total_def = def_counts.sum()
+    percentuais_def = [(v/total_def*100) for v in def_counts.values]
     fig7 = px.bar(
         x=def_counts.index,
         y=def_counts.values,
@@ -473,10 +496,12 @@ with tab2:
         },
         color=def_counts.values,
         color_continuous_scale="Oranges",
+        custom_data=[percentuais_def],
     )
     fig7.update_layout(height=350)
     fig7.update_xaxes(showgrid=False)
     fig7.update_yaxes(showgrid=False)
+    fig7.update_traces(hovertemplate='<b>%{x}</b><br>Quantidade: %{y}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
     st.plotly_chart(fig7, use_container_width=True)
 
   # Análise cruzada: Diversidade dos Aprovados
@@ -492,6 +517,8 @@ with tab2:
       raca_entrevista = df_entrevista[
           "Como você se autodeclara em relação à sua cor ou raça?  "].value_counts(
           )
+      total_raca_ent = raca_entrevista.sum()
+      percentuais_raca_ent = [(v/total_raca_ent*100) for v in raca_entrevista.values]
       fig8 = px.bar(
           x=raca_entrevista.values,
           y=raca_entrevista.index,
@@ -501,13 +528,13 @@ with tab2:
               "x": "Quantidade",
               "y": "Raça/Cor"
           },
-          text=raca_entrevista.values,
           color=raca_entrevista.values,
           color_continuous_scale="Greens",
+          custom_data=[percentuais_raca_ent],
       )
-      fig8.update_traces(textposition="outside")
       fig8.update_xaxes(showgrid=False)
       fig8.update_yaxes(showgrid=False)
+      fig8.update_traces(hovertemplate='<b>%{y}</b><br>Quantidade: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
       st.plotly_chart(fig8, use_container_width=True)
 
     with col6:
@@ -517,6 +544,8 @@ with tab2:
           )
       pronome_entrevista = df_entrevista[
           "Quais pronomes você utiliza?  "].value_counts()
+      total_pron_ent = pronome_entrevista.sum()
+      percentuais_pron_ent = [(v/total_pron_ent*100) for v in pronome_entrevista.values]
 
       fig8b = px.bar(
           x=pronome_entrevista.values,
@@ -527,13 +556,13 @@ with tab2:
               "x": "Quantidade",
               "y": "Pronomes"
           },
-          text=pronome_entrevista.values,
           color=pronome_entrevista.values,
           color_continuous_scale="Greens",
+          custom_data=[percentuais_pron_ent],
       )
-      fig8b.update_traces(textposition="outside")
       fig8b.update_xaxes(showgrid=False)
       fig8b.update_yaxes(showgrid=False)
+      fig8b.update_traces(hovertemplate='<b>%{y}</b><br>Quantidade: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
       st.plotly_chart(fig8b, use_container_width=True)
   else:
     st.info("Nenhum candidato aprovado com os filtros selecionados.")
@@ -551,6 +580,8 @@ with tab2:
       raca_eliminados = df_eliminados[
           "Como você se autodeclara em relação à sua cor ou raça?  "].value_counts(
           )
+      total_raca_elim = raca_eliminados.sum()
+      percentuais_raca_elim = [(v/total_raca_elim*100) for v in raca_eliminados.values]
       fig9 = px.bar(
           x=raca_eliminados.values,
           y=raca_eliminados.index,
@@ -560,18 +591,20 @@ with tab2:
               "x": "Quantidade",
               "y": "Raça/Cor"
           },
-          text=raca_eliminados.values,
           color=raca_eliminados.values,
           color_continuous_scale="Reds",
+          custom_data=[percentuais_raca_elim],
       )
-      fig9.update_traces(textposition="outside")
       fig9.update_xaxes(showgrid=False)
       fig9.update_yaxes(showgrid=False)
+      fig9.update_traces(hovertemplate='<b>%{y}</b><br>Quantidade: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
       st.plotly_chart(fig9, use_container_width=True)
 
     with col8:
       pronome_eliminados = df_eliminados[
           "Quais pronomes você utiliza?  "].value_counts()
+      total_pron_elim = pronome_eliminados.sum()
+      percentuais_pron_elim = [(v/total_pron_elim*100) for v in pronome_eliminados.values]
       fig9b = px.bar(
           x=pronome_eliminados.values,
           y=pronome_eliminados.index,
@@ -581,13 +614,13 @@ with tab2:
               "x": "Quantidade",
               "y": "Pronomes"
           },
-          text=pronome_eliminados.values,
           color=pronome_eliminados.values,
           color_continuous_scale="Reds",
+          custom_data=[percentuais_pron_elim],
       )
-      fig9b.update_traces(textposition="outside")
       fig9b.update_xaxes(showgrid=False)
       fig9b.update_yaxes(showgrid=False)
+      fig9b.update_traces(hovertemplate='<b>%{y}</b><br>Quantidade: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
       st.plotly_chart(fig9b, use_container_width=True)
 
   else:
@@ -669,6 +702,7 @@ with tab2:
     )
     fig10.update_xaxes(showgrid=False, tickangle=-45)
     fig10.update_yaxes(showgrid=False)
+    fig10.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Quantidade: %{y}<extra></extra>')
     st.plotly_chart(fig10, use_container_width=True)
 
   with col10:
@@ -695,6 +729,7 @@ with tab2:
     fig10b.update_xaxes(showgrid=False, tickangle=-45)
     fig10b.update_yaxes(showgrid=False)
     fig10b.update_layout(yaxis_tickformat=".0%")
+    fig10b.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Proporção: %{y:.1%}<extra></extra>')
     st.plotly_chart(fig10b, use_container_width=True)
 
   # Análise LGBTQIAPN+ por fase
@@ -723,6 +758,7 @@ with tab2:
     )
     fig11_lgbtq.update_xaxes(showgrid=False, tickangle=-45)
     fig11_lgbtq.update_yaxes(showgrid=False)
+    fig11_lgbtq.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Quantidade: %{y}<extra></extra>')
     st.plotly_chart(fig11_lgbtq, use_container_width=True)
 
   with col12:
@@ -749,6 +785,7 @@ with tab2:
     fig11b_lgbtq.update_xaxes(showgrid=False, tickangle=-45)
     fig11b_lgbtq.update_yaxes(showgrid=False)
     fig11b_lgbtq.update_layout(yaxis_tickformat=".0%")
+    fig11b_lgbtq.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Proporção: %{y:.1%}<extra></extra>')
     st.plotly_chart(fig11b_lgbtq, use_container_width=True)
 
   # Análise de Identidade de Gênero (Pronomes) por fase
@@ -776,6 +813,7 @@ with tab2:
     )
     fig12_pronome.update_xaxes(showgrid=False, tickangle=-45)
     fig12_pronome.update_yaxes(showgrid=False)
+    fig12_pronome.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Quantidade: %{y}<extra></extra>')
     st.plotly_chart(fig12_pronome, use_container_width=True)
 
   with col14:
@@ -800,6 +838,7 @@ with tab2:
     fig12b_pronome.update_xaxes(showgrid=False, tickangle=-45)
     fig12b_pronome.update_yaxes(showgrid=False)
     fig12b_pronome.update_layout(yaxis_tickformat=".0%")
+    fig12b_pronome.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Proporção: %{y:.1%}<extra></extra>')
     st.plotly_chart(fig12b_pronome, use_container_width=True)
 
 # TAB 3: ACADÊMICO
@@ -810,6 +849,8 @@ with tab3:
     st.subheader("Distribuição por Período")
     periodo_counts = df_filtrado["Qual o seu período?"].value_counts(
     ).sort_index()
+    total_periodo = periodo_counts.sum()
+    percentuais_periodo = [(v/total_periodo*100) for v in periodo_counts.values]
     fig11 = px.bar(
         x=periodo_counts.index,
         y=periodo_counts.values,
@@ -820,9 +861,11 @@ with tab3:
         },
         color=periodo_counts.values,
         color_continuous_scale="Viridis",
+        custom_data=[percentuais_periodo],
     )
     fig11.update_xaxes(showgrid=False)
     fig11.update_yaxes(showgrid=False)
+    fig11.update_traces(hovertemplate='<b>Período %{x}</b><br>Quantidade: %{y}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
     st.plotly_chart(fig11, use_container_width=True)
 
   with col2:
@@ -844,6 +887,7 @@ with tab3:
     )
     fig12.update_xaxes(showgrid=False)
     fig12.update_yaxes(showgrid=False)
+    fig12.update_traces(hovertemplate='<b>%{y}</b><br>Taxa: %{x:.1f}%<extra></extra>')
     st.plotly_chart(fig12, use_container_width=True)
 
   # Análise de Períodos ao longo do Funil
@@ -919,6 +963,7 @@ with tab3:
     )
     fig_periodo1.update_xaxes(showgrid=False, tickangle=-45)
     fig_periodo1.update_yaxes(showgrid=False)
+    fig_periodo1.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Quantidade: %{y}<extra></extra>')
     st.plotly_chart(fig_periodo1, use_container_width=True)
 
   with col_p2:
@@ -943,6 +988,7 @@ with tab3:
     fig_periodo2.update_xaxes(showgrid=False, tickangle=-45)
     fig_periodo2.update_yaxes(showgrid=False)
     fig_periodo2.update_layout(yaxis_tickformat=".0%")
+    fig_periodo2.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Proporção: %{y:.1%}<extra></extra>')
     st.plotly_chart(fig_periodo2, use_container_width=True)
 
 # TAB 4: DIVULGAÇÃO
@@ -953,10 +999,9 @@ with tab4:
       df_filtrado["Como você ficou sabendo do processo seletivo?"].
       value_counts().sort_values(ascending=True))
 
-  total = divulgacao_counts.sum()
-  percentuais = (divulgacao_counts / total * 100).round(1)
-
-  # Gráfico principal com percentuais
+  total_divulgacao = divulgacao_counts.sum()
+  percentuais_divulgacao = [(v/total_divulgacao*100) for v in divulgacao_counts.values]
+  # Gráfico principal
   fig14 = px.bar(
       y=divulgacao_counts.index,
       x=divulgacao_counts.values,
@@ -966,17 +1011,14 @@ with tab4:
           "x": "Número de Candidatos",
           "y": "Canal"
       },
-      text=[
-          f"{val} ({pct}%)"
-          for val, pct in zip(divulgacao_counts.values, percentuais)
-      ],
       color=divulgacao_counts.values,
       color_continuous_scale="Viridis",
+      custom_data=[percentuais_divulgacao],
   )
-  fig14.update_traces(textposition="outside")
   fig14.update_layout(showlegend=False, height=400)
   fig14.update_xaxes(showgrid=False)
   fig14.update_yaxes(showgrid=False)
+  fig14.update_traces(hovertemplate='<b>%{y}</b><br>Candidatos: %{x}<br>Porcentagem: %{customdata[0]:.1f}%<extra></extra>')
   st.plotly_chart(fig14, use_container_width=True)
 
   st.markdown("---")
@@ -1054,6 +1096,7 @@ with tab4:
     )
     fig15.update_xaxes(showgrid=False, tickangle=-45)
     fig15.update_yaxes(showgrid=False)
+    fig15.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Quantidade: %{y}<extra></extra>')
     st.plotly_chart(fig15, use_container_width=True)
 
   with col_c2:
@@ -1078,6 +1121,7 @@ with tab4:
     fig16.update_xaxes(showgrid=False, tickangle=-45)
     fig16.update_yaxes(showgrid=False)
     fig16.update_layout(yaxis_tickformat=".0%")
+    fig16.update_traces(hovertemplate='<b>%{fullData.name}</b><br>Proporção: %{y:.1%}<extra></extra>')
     st.plotly_chart(fig16, use_container_width=True)
 
   # Taxa de conversão por canal
@@ -1097,13 +1141,12 @@ with tab4:
           "x": "Taxa de Conversão (%)",
           "y": "Canal"
       },
-      text=[f"{val:.1f}%" for val in taxa_conversao.values],
       color=taxa_conversao.values,
       color_continuous_scale="RdYlGn",
   )
-  fig17.update_traces(textposition="outside")
   fig17.update_xaxes(showgrid=False)
   fig17.update_yaxes(showgrid=False)
+  fig17.update_traces(hovertemplate='<b>%{y}</b><br>Taxa: %{x:.1f}%<extra></extra>')
   st.plotly_chart(fig17, use_container_width=True)
 
 # TAB 5: DADOS DETALHADOS
