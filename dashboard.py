@@ -27,48 +27,97 @@ df = load_data()
 st.sidebar.header("🔍 Filtros")
 
 # Filtro de Fase
-fases = ["Todas"] + sorted(df["Fase atual"].unique().tolist())
+fases = sorted(df["Fase atual"].unique().tolist())
 fase_selecionada = st.sidebar.multiselect("Fase Atual",
                                           options=fases,
-                                          default=["Todas"])
+                                          default=[])
 
 # Filtro de Curso
-cursos = ["Todos"] + sorted(df["Curso"].unique().tolist())
+cursos = sorted(df["Curso"].unique().tolist())
 curso_selecionado = st.sidebar.multiselect("Curso",
                                            options=cursos,
-                                           default=["Todos"])
+                                           default=[])
 
 # Filtro de Período
-periodos = ["Todos"] + sorted(df["Qual o seu período?"].unique().tolist())
+periodos = sorted(df["Qual o seu período?"].unique().tolist())
 periodo_selecionado = st.sidebar.multiselect("Período",
                                              options=periodos,
-                                             default=["Todos"])
+                                             default=[])
 
 # Filtro de Raça/Cor
-racas = ["Todas"] + sorted(
+racas = sorted(
     df["Como você se autodeclara em relação à sua cor ou raça?  "].unique(
     ).tolist())
 raca_selecionada = st.sidebar.multiselect("Raça/Cor",
                                           options=racas,
-                                          default=["Todas"])
+                                          default=[])
+
+# Filtro de LGBTQIAPN+
+lgbtq_opcoes = sorted(
+    df["Você se identifica como parte da comunidade LGBTQIAPN+?  "].unique(
+    ).tolist())
+lgbtq_selecionada = st.sidebar.multiselect("LGBTQIAPN+",
+                                           options=lgbtq_opcoes,
+                                           default=[])
+
+# Filtro de Pronomes
+pronomes = sorted(
+    df["Quais pronomes você utiliza?  "].unique().tolist())
+pronome_selecionado = st.sidebar.multiselect("Pronomes",
+                                             options=pronomes,
+                                             default=[])
+
+# Filtro de Acessibilidade
+acessibilidades = sorted(
+    df["Você possui alguma deficiência, condição ou necessidade específica que a IN Junior deveria considerar para garantir acessibilidade e inclusão?  "].unique(
+    ).tolist())
+acessibilidade_selecionada = st.sidebar.multiselect("Acessibilidade",
+                                                    options=acessibilidades,
+                                                    default=[])
+
+# Filtro de Divulgação
+divulgacao = sorted(
+    df["Como você ficou sabendo do processo seletivo?"].unique().tolist())
+divulgacao_selecionada = st.sidebar.multiselect("Canal de Divulgação",
+                                                options=divulgacao,
+                                                default=[])
 
 # Aplicar filtros
 df_filtrado = df.copy()
 
-if "Todas" not in fase_selecionada and len(fase_selecionada) > 0:
+if len(fase_selecionada) > 0:
   df_filtrado = df_filtrado[df_filtrado["Fase atual"].isin(fase_selecionada)]
 
-if "Todos" not in curso_selecionado and len(curso_selecionado) > 0:
+if len(curso_selecionado) > 0:
   df_filtrado = df_filtrado[df_filtrado["Curso"].isin(curso_selecionado)]
 
-if "Todos" not in periodo_selecionado and len(periodo_selecionado) > 0:
+if len(periodo_selecionado) > 0:
   df_filtrado = df_filtrado[df_filtrado["Qual o seu período?"].isin(
       periodo_selecionado)]
 
-if "Todas" not in raca_selecionada and len(raca_selecionada) > 0:
+if len(raca_selecionada) > 0:
   df_filtrado = df_filtrado[
       df_filtrado["Como você se autodeclara em relação à sua cor ou raça?  "].
       isin(raca_selecionada)]
+
+if len(lgbtq_selecionada) > 0:
+  df_filtrado = df_filtrado[
+      df_filtrado["Você se identifica como parte da comunidade LGBTQIAPN+?  "].
+      isin(lgbtq_selecionada)]
+
+if len(pronome_selecionado) > 0:
+  df_filtrado = df_filtrado[
+      df_filtrado["Quais pronomes você utiliza?  "].isin(pronome_selecionado)]
+
+if len(acessibilidade_selecionada) > 0:
+  df_filtrado = df_filtrado[
+      df_filtrado["Você possui alguma deficiência, condição ou necessidade específica que a IN Junior deveria considerar para garantir acessibilidade e inclusão?  "].
+      isin(acessibilidade_selecionada)]
+
+if len(divulgacao_selecionada) > 0:
+  df_filtrado = df_filtrado[
+      df_filtrado["Como você ficou sabendo do processo seletivo?"].
+      isin(divulgacao_selecionada)]
 
 # Métricas principais
 col1, col2, col3, col4 = st.columns(4)
@@ -176,6 +225,34 @@ with tab1:
                      showlegend=False)
   st.plotly_chart(fig1, use_container_width=True)
 
+  # Estatísticas do Funil
+  st.markdown("### Estatísticas do Funil")
+  col_stat1, col_stat2, col_stat3, col_stat4, col_stat5 = st.columns(5)
+
+  with col_stat1:
+    st.metric("Taxa de Resposta", f"{(responderam/total_candidatos*100):.1f}%")
+  
+  with col_stat2:
+    st.metric(
+        "Taxa Fit Cultural",
+        f"{(passaram_fit_cultural/responderam*100 if responderam > 0 else 0):.1f}%",
+    )
+  
+  with col_stat3:
+    st.metric(
+        "Taxa Comparecimento",
+        f"{(compareceram_dinamica/passaram_fit_cultural*100 if passaram_fit_cultural > 0 else 0):.1f}%",
+    )
+  
+  with col_stat4:
+    st.metric(
+        "Taxa Aprovação Dinâmica",
+        f"{(aprovados_dinamica/compareceram_dinamica*100 if compareceram_dinamica > 0 else 0):.1f}%",
+    )
+  
+  with col_stat5:
+    st.metric("Taxa Final (Entrevista)", f"{(entrevista/total_candidatos*100):.1f}%")
+
   # Distribuição por Curso
   st.markdown("---")
   st.subheader("Distribuição por Curso")
@@ -194,80 +271,6 @@ with tab1:
   fig2.update_xaxes(showgrid=False)
   fig2.update_yaxes(showgrid=False)
   st.plotly_chart(fig2, use_container_width=True)
-
-  # Detalhamento das fases
-  st.markdown("---")
-  st.subheader("Detalhamento por Fase")
-
-  col3, col4 = st.columns([2, 1])
-
-  with col3:
-    # Ordem correta das fases do processo
-    ordem_fases = [
-        "Eliminados Falta de Resposta",
-        "Eliminados do Fit Cultural e Vídeo de Apresentação",
-        "Falta na Dinâmica",
-        "Eliminados da Dinâmica",
-        "Entrevista",
-    ]
-
-    fase_counts = df_filtrado["Fase atual"].value_counts()
-
-    # Reordenar conforme o processo
-    fase_counts_ordenado = pd.Series({
-        fase: fase_counts.get(fase, 0)
-        for fase in ordem_fases if fase in fase_counts.index
-    })
-
-    # Cores personalizadas para cada tipo de fase
-    cores_fase = {
-        "Eliminados Falta de Resposta": "#E74C3C",  # Vermelho
-        "Eliminados do Fit Cultural e Vídeo de Apresentação":
-        "#C0392B",  # Vermelho escuro
-        "Falta na Dinâmica": "#F39C12",  # Amarelo
-        "Eliminados da Dinâmica": "#E67E22",  # Laranja
-        "Entrevista": "#2ECC71",  # Verde para sucesso
-    }
-
-    cores = [
-        cores_fase.get(fase, "#95A5A6") for fase in fase_counts_ordenado.index
-    ]
-
-    fig_detalhe = px.bar(
-        y=fase_counts_ordenado.index,
-        x=fase_counts_ordenado.values,
-        orientation="h",
-        title="Candidatos por Fase Detalhado",
-        labels={
-            "x": "Quantidade de Candidatos",
-            "y": "Fase"
-        },
-        text=fase_counts_ordenado.values,
-    )
-    fig_detalhe.update_traces(marker_color=cores, textposition="outside")
-    fig_detalhe.update_layout(showlegend=False, height=350)
-    fig_detalhe.update_xaxes(showgrid=False)
-    fig_detalhe.update_yaxes(showgrid=False)
-    st.plotly_chart(fig_detalhe, use_container_width=True)
-
-  with col4:
-    st.markdown("### Estatísticas")
-    total = len(df_filtrado)
-
-    st.metric("Taxa de Resposta", f"{(responderam/total*100):.1f}%")
-    st.metric(
-        "Taxa Fit Cultural",
-        f"{(passaram_fit_cultural/responderam*100 if responderam > 0 else 0):.1f}%",
-    )
-    st.metric(
-        "Taxa Comparecimento",
-        f"{(compareceram_dinamica/passaram_fit_cultural*100 if passaram_fit_cultural > 0 else 0):.1f}%",
-    )
-    st.metric(
-        "Taxa Aprovação Dinâmica",
-        f"{(aprovados_dinamica/compareceram_dinamica*100 if compareceram_dinamica > 0 else 0):.1f}%",
-    )
-    st.metric("Taxa Final (Entrevista)", f"{(entrevista/total*100):.1f}%")
 
   st.markdown("---")
   st.subheader("Distribuição de Cursos ao Longo do Funil")
