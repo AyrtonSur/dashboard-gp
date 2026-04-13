@@ -17,7 +17,7 @@ st.markdown("---")
 # Carregar dados
 @st.cache_data
 def load_data():
-  df = pd.read_csv("Cópia de Dados PS - Report.csv")
+  df = pd.read_csv("Dados Finais PS 26.1 - Página1.csv")
   return df
 
 
@@ -33,7 +33,9 @@ fases_funil = [
     "Aprovados Fit Cultural",
     "Compareceram Dinâmica",
     "Aprovados Dinâmica",
-    "Entrevista"
+    "Aprovados Entrevista",
+    "Fizeram o Treinamento",
+    "Aprovados do Treinamento"
 ]
 fase_selecionada = st.sidebar.selectbox("Fase do Processo",
                                         options=fases_funil,
@@ -92,18 +94,22 @@ divulgacao_selecionada = st.sidebar.multiselect("Canal de Divulgação",
 # Aplicar filtros
 df_filtrado = df.copy()
 
-if fase_selecionada != "1. Inscritos":
+if fase_selecionada != "Inscritos":
   # Mapear fase selecionada para condição de filtro
-  if fase_selecionada == "2. Responderam":
-    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta", na=False)]
-  elif fase_selecionada == "3. Aprovados Fit Cultural":
-    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta|Fit Cultural", na=False, regex=True)]
-  elif fase_selecionada == "4. Compareceram Dinâmica":
-    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta|Fit Cultural|Falta na Dinâmica", na=False, regex=True)]
-  elif fase_selecionada == "5. Aprovados Dinâmica":
-    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica", na=False, regex=True)]
-  elif fase_selecionada == "6. Entrevista":
-    df_filtrado = df_filtrado[df_filtrado["Fase atual"] == "Entrevista"]
+  if fase_selecionada == "Responderam":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta", na=False)]
+  elif fase_selecionada == "Aprovados Fit Cultural":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural", na=False, regex=True)]
+  elif fase_selecionada == "Compareceram Dinâmica":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica", na=False, regex=True)]
+  elif fase_selecionada == "Aprovados Dinâmica":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica", na=False, regex=True)]
+  elif fase_selecionada == "Aprovados Entrevista":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista", na=False, regex=True)]
+  elif fase_selecionada == "Fizeram o Treinamento":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência", na=False, regex=True)]
+  elif fase_selecionada == "Aprovados do Treinamento":
+    df_filtrado = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento", na=False, regex=True)]
 
 if len(curso_selecionado) > 0:
   df_filtrado = df_filtrado[df_filtrado["Curso"].isin(curso_selecionado)]
@@ -143,13 +149,13 @@ with col1:
   st.metric("Total de Candidatos", len(df_filtrado))
 
 with col2:
-  entrevistas = len(df_filtrado[df_filtrado["Fase atual"] == "Entrevista"])
-  st.metric("Chegaram à Entrevista", entrevistas)
+  aprovados_final = len(df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento", na=False, regex=True)])
+  st.metric("Aprovados (Final)", aprovados_final)
 
 with col3:
-  taxa_entrevista = ((entrevistas / len(df_filtrado) *
+  taxa_aprovacao = ((aprovados_final / len(df_filtrado) *
                       100) if len(df_filtrado) > 0 else 0)
-  st.metric("Taxa de Entrevista", f"{taxa_entrevista:.1f}%")
+  st.metric("Taxa de Aprovação", f"{taxa_aprovacao:.1f}%")
 
 with col4:
   lgbtq = len(df_filtrado[
@@ -183,29 +189,47 @@ with tab1:
 
   # Fase 1: Responderam (excluindo eliminados por falta de resposta)
   responderam = len(df_filtrado[~df_filtrado["Fase atual"].str.
-                                contains("Falta de Resposta", na=False)])
+                                contains("Eliminados Falta de Resposta", na=False)])
 
   # Fase 2: Passaram Fit Cultural (excluindo eliminados do fit cultural)
   passaram_fit_cultural = len(
       df_filtrado[~df_filtrado["Fase atual"].str.contains(
-          "Falta de Resposta|Fit Cultural", na=False, regex=True)])
+          "Eliminados Falta de Resposta|Eliminados do Fit Cultural", na=False, regex=True)])
 
   # Fase 3: Compareceram à Dinâmica (excluindo falta na dinâmica)
   compareceram_dinamica = len(
       df_filtrado[~df_filtrado["Fase atual"].str.
-                  contains("Falta de Resposta|Fit Cultural|Falta na Dinâmica",
+                  contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica",
                            na=False,
                            regex=True)])
 
   # Fase 4: Aprovados na Dinâmica (excluindo eliminados da dinâmica)
   aprovados_dinamica = len(df_filtrado[~df_filtrado["Fase atual"].str.contains(
-      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica",
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica",
       na=False,
       regex=True,
   )])
 
-  # Fase 5: Entrevista (fase final)
-  entrevista = len(df_filtrado[df_filtrado["Fase atual"] == "Entrevista"])
+  # Fase 5: Aprovados Entrevista (excluindo eliminados da entrevista)
+  aprovados_entrevista = len(df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista",
+      na=False,
+      regex=True,
+  )])
+
+  # Fase 6: Fizeram o Treinamento (excluindo desistências)
+  fizeram_treinamento = len(df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência",
+      na=False,
+      regex=True,
+  )])
+
+  # Fase 7: Aprovados do Treinamento (excluindo eliminados do treinamento)
+  aprovados_treinamento = len(df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento",
+      na=False,
+      regex=True,
+  )])
 
   # Criar o gráfico de funil
   fig1 = go.Figure(
@@ -216,7 +240,9 @@ with tab1:
               "Aprovados<br>Fit Cultural",
               "Compareceram<br>Dinâmica",
               "Aprovados<br>Dinâmica",
-              "Entrevista",
+              "Aprovados<br>Entrevista",
+              "Fizeram<br>Treinamento",
+              "Aprovados<br>Treinamento",
           ],
           x=[
               total_candidatos,
@@ -224,7 +250,9 @@ with tab1:
               passaram_fit_cultural,
               compareceram_dinamica,
               aprovados_dinamica,
-              entrevista,
+              aprovados_entrevista,
+              fizeram_treinamento,
+              aprovados_treinamento,
           ],
           textposition="inside",
           textinfo="value+percent initial",
@@ -236,6 +264,8 @@ with tab1:
                   "#7DCEA0",
                   "#52BE80",
                   "#2ECC71",
+                  "#F39C12",
+                  "#E74C3C",
               ],
               line=dict(width=2, color="white"),
           ),
@@ -250,7 +280,8 @@ with tab1:
 
   # Estatísticas do Funil
   st.markdown("### Estatísticas do Funil")
-  col_stat1, col_stat2, col_stat3, col_stat4, col_stat5 = st.columns(5)
+  
+  col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
 
   with col_stat1:
     st.metric("Taxa de Resposta", f"{(responderam/total_candidatos*100 if total_candidatos > 0 else 0):.1f}%")
@@ -272,9 +303,26 @@ with tab1:
         "Taxa Aprovação Dinâmica",
         f"{(aprovados_dinamica/compareceram_dinamica*100 if compareceram_dinamica > 0 else 0):.1f}%",
     )
-  
+
+  col_stat5, col_stat6, col_stat7, col_stat8 = st.columns(4)
+
   with col_stat5:
-    st.metric("Taxa Final (Entrevista)", f"{(entrevista/total_candidatos*100 if total_candidatos > 0 else 0):.1f}%")
+    st.metric("Taxa Aprovação Entrevista", f"{(aprovados_entrevista/aprovados_dinamica*100 if aprovados_dinamica > 0 else 0):.1f}%")
+  
+  with col_stat6:
+    st.metric(
+        "Taxa Finalização Treinamento",
+        f"{(fizeram_treinamento/aprovados_entrevista*100 if aprovados_entrevista > 0 else 0):.1f}%",
+    )
+  
+  with col_stat7:
+    st.metric(
+        "Taxa Aprovação Treinamento",
+        f"{(aprovados_treinamento/fizeram_treinamento*100 if fizeram_treinamento > 0 else 0):.1f}%",
+    )
+  
+  with col_stat8:
+    st.metric("Taxa Final", f"{(aprovados_treinamento/total_candidatos*100 if total_candidatos > 0 else 0):.1f}%")
 
   # Distribuição por Curso
   st.markdown("---")
@@ -344,12 +392,35 @@ with tab1:
     df_aprovados_curso["Fase_Funil"] = "5. Aprovados Din."
     fases_curso_analise.append(df_aprovados_curso)
 
-  # Fase 6: Entrevista
-  df_entrevista_curso = df_filtrado[df_filtrado["Fase atual"] ==
-                                    "Entrevista"].copy()
-  if len(df_entrevista_curso) > 0:
-    df_entrevista_curso["Fase_Funil"] = "6. Entrevista"
-    fases_curso_analise.append(df_entrevista_curso)
+  # Fase 6: Aprovados Entrevista
+  df_aprovados_entrevista_curso = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_aprovados_entrevista_curso) > 0:
+    df_aprovados_entrevista_curso["Fase_Funil"] = "6. Aprovados Entrevista"
+    fases_curso_analise.append(df_aprovados_entrevista_curso)
+
+  # Fase 7: Fizeram Treinamento
+  df_treinamento_curso = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_treinamento_curso) > 0:
+    df_treinamento_curso["Fase_Funil"] = "7. Fizeram Treinamento"
+    fases_curso_analise.append(df_treinamento_curso)
+
+  # Fase 8: Aprovados Treinamento
+  df_aprovados_treinamento_curso = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_aprovados_treinamento_curso) > 0:
+    df_aprovados_treinamento_curso["Fase_Funil"] = "8. Aprovados Treinamento"
+    fases_curso_analise.append(df_aprovados_treinamento_curso)
 
   # Combinar todos os dados
   df_funil_curso = pd.concat(fases_curso_analise, ignore_index=True)
@@ -516,31 +587,31 @@ with tab2:
 
   # Análise cruzada: Diversidade dos Aprovados
   st.markdown("---")
-  st.subheader("Perfil dos Candidatos Aprovados (Entrevista)")
+  st.subheader("Perfil dos Candidatos Aprovados (Final)")
 
-  df_entrevista = df_filtrado[df_filtrado["Fase atual"] == "Entrevista"]
+  df_aprovados = df_filtrado[~df_filtrado["Fase atual"].str.contains("Eliminados Falta de Resposta|Eliminados do Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento", na=False, regex=True)]
 
-  if len(df_entrevista) > 0:
+  if len(df_aprovados) > 0:
     col5, col6 = st.columns(2)
 
     with col5:
-      raca_entrevista = df_entrevista[
+      raca_aprovados = df_aprovados[
           "Como você se autodeclara em relação à sua cor ou raça?  "].value_counts(
           )
-      total_raca_ent = raca_entrevista.sum()
-      percentuais_raca_ent = [(v/total_raca_ent*100 if total_raca_ent > 0 else 0) for v in raca_entrevista.values]
+      total_raca_apr = raca_aprovados.sum()
+      percentuais_raca_apr = [(v/total_raca_apr*100 if total_raca_apr > 0 else 0) for v in raca_aprovados.values]
       fig8 = px.bar(
-          x=raca_entrevista.values,
-          y=raca_entrevista.index,
+          x=raca_aprovados.values,
+          y=raca_aprovados.index,
           orientation="h",
           title="Distribuição Racial - Aprovados",
           labels={
               "x": "Quantidade",
               "y": "Raça/Cor"
           },
-          color=raca_entrevista.values,
+          color=raca_aprovados.values,
           color_continuous_scale="Greens",
-          custom_data=[percentuais_raca_ent],
+          custom_data=[percentuais_raca_apr],
       )
       fig8.update_xaxes(showgrid=False)
       fig8.update_yaxes(showgrid=False)
@@ -549,26 +620,26 @@ with tab2:
 
     with col6:
       # Análise adicional dos aprovados
-      lgbtq_entrevista = df_entrevista[
+      lgbtq_aprovados = df_aprovados[
           "Você se identifica como parte da comunidade LGBTQIAPN+?  "].value_counts(
           )
-      pronome_entrevista = df_entrevista[
+      pronome_aprovados = df_aprovados[
           "Quais pronomes você utiliza?  "].value_counts()
-      total_pron_ent = pronome_entrevista.sum()
-      percentuais_pron_ent = [(v/total_pron_ent*100 if total_pron_ent > 0 else 0) for v in pronome_entrevista.values]
+      total_pron_apr = pronome_aprovados.sum()
+      percentuais_pron_apr = [(v/total_pron_apr*100 if total_pron_apr > 0 else 0) for v in pronome_aprovados.values]
 
       fig8b = px.bar(
-          x=pronome_entrevista.values,
-          y=pronome_entrevista.index,
+          x=pronome_aprovados.values,
+          y=pronome_aprovados.index,
           orientation="h",
           title="Pronomes - Aprovados",
           labels={
               "x": "Quantidade",
               "y": "Pronomes"
           },
-          color=pronome_entrevista.values,
+          color=pronome_aprovados.values,
           color_continuous_scale="Greens",
-          custom_data=[percentuais_pron_ent],
+          custom_data=[percentuais_pron_apr],
       )
       fig8b.update_xaxes(showgrid=False)
       fig8b.update_yaxes(showgrid=False)
@@ -683,12 +754,35 @@ with tab2:
     df_aprovados["Fase_Funil"] = "5. Aprovados Dinâmica"
     fases_analise.append(df_aprovados)
 
-  # Fase 6: Entrevista
-  df_entrevista_funil = df_filtrado[df_filtrado["Fase atual"] ==
-                                    "Entrevista"].copy()
-  if len(df_entrevista_funil) > 0:
-    df_entrevista_funil["Fase_Funil"] = "6. Entrevista"
-    fases_analise.append(df_entrevista_funil)
+  # Fase 6: Aprovados Entrevista
+  df_aprovados_entrevista = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_aprovados_entrevista) > 0:
+    df_aprovados_entrevista["Fase_Funil"] = "6. Aprovados Entrevista"
+    fases_analise.append(df_aprovados_entrevista)
+
+  # Fase 7: Fizeram Treinamento
+  df_fizeram_treinamento = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_fizeram_treinamento) > 0:
+    df_fizeram_treinamento["Fase_Funil"] = "7. Fizeram Treinamento"
+    fases_analise.append(df_fizeram_treinamento)
+
+  # Fase 8: Aprovados Treinamento
+  df_aprovados_treinamento = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_aprovados_treinamento) > 0:
+    df_aprovados_treinamento["Fase_Funil"] = "8. Aprovados Treinamento"
+    fases_analise.append(df_aprovados_treinamento)
 
   # Combinar todos os dados
   df_funil_completo = pd.concat(fases_analise, ignore_index=True)
@@ -886,13 +980,13 @@ with tab3:
   with col2:
     st.subheader("Taxa de Aprovação por Curso")
     aprovacao_curso = (df_filtrado.groupby("Curso")["Fase atual"].apply(
-        lambda x: (x == "Entrevista").sum() / len(x) * 100
+        lambda x: (x == "Aprovados").sum() / len(x) * 100
         if len(x) > 0 else 0).sort_values(ascending=False))
     fig12 = px.bar(
         x=aprovacao_curso.values,
         y=aprovacao_curso.index,
         orientation="h",
-        title="Taxa de Aprovação para Entrevista (%)",
+        title="Taxa de Aprovação Final por Curso (%)",
         labels={
             "x": "Taxa (%)",
             "y": "Curso"
@@ -952,12 +1046,35 @@ with tab3:
     df_aprovados_p["Fase_Funil"] = "5. Aprovados Din."
     fases_periodo.append(df_aprovados_p)
 
-  # Fase 6: Entrevista
-  df_entrevista_p = df_filtrado[df_filtrado["Fase atual"] ==
-                                "Entrevista"].copy()
-  if len(df_entrevista_p) > 0:
-    df_entrevista_p["Fase_Funil"] = "6. Entrevista"
-    fases_periodo.append(df_entrevista_p)
+  # Fase 6: Aprovados Entrevista
+  df_aprovados_entrevista_p = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_aprovados_entrevista_p) > 0:
+    df_aprovados_entrevista_p["Fase_Funil"] = "6. Aprovados Entrevista"
+    fases_periodo.append(df_aprovados_entrevista_p)
+
+  # Fase 7: Fizeram Treinamento
+  df_fizeram_treinamento_p = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_fizeram_treinamento_p) > 0:
+    df_fizeram_treinamento_p["Fase_Funil"] = "7. Fizeram Treinamento"
+    fases_periodo.append(df_fizeram_treinamento_p)
+
+  # Fase 8: Aprovados Treinamento
+  df_aprovados_treinamento_p = df_filtrado[~df_filtrado["Fase atual"].str.contains(
+      "Falta de Resposta|Fit Cultural|Falta na Dinâmica|Eliminados da Dinâmica|Eliminados da Entrevista|Desistência|Eliminados no Treinamento",
+      na=False,
+      regex=True,
+  )].copy()
+  if len(df_aprovados_treinamento_p) > 0:
+    df_aprovados_treinamento_p["Fase_Funil"] = "8. Aprovados Treinamento"
+    fases_periodo.append(df_aprovados_treinamento_p)
 
   # Combinar todos os dados
   df_funil_periodo = pd.concat(fases_periodo, ignore_index=True)
@@ -1122,7 +1239,7 @@ with tab4:
   st.subheader("Taxa de Conversão Final por Canal")
   taxa_conversao = (
       df_filtrado.groupby("Como você ficou sabendo do processo seletivo?")
-      ["Fase atual"].apply(lambda x: (x == "Entrevista").sum() / len(x) * 100
+      ["Fase atual"].apply(lambda x: (x == "Aprovados").sum() / len(x) * 100
                            if len(x) > 0 else 0).sort_values(ascending=False))
 
   fig17 = px.bar(
